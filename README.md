@@ -61,7 +61,5 @@ The results are saved in `scholar_results.json` in the following format:
 - Ensure you have Chrome installed and the appropriate WebDriver for Selenium.
 - The script includes a delay to prevent blocking by Google Scholar.
 
-## License
 
-This project is licensed under the MIT License.
 ````
