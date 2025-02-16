@@ -36,66 +36,53 @@ def simple_summary(text, num_sentences=2):
 def generate_abstract(text, article_title=""):
     """
     Generates an abstract from the input text using the summarizer.
-    Splits text into chunks, summarizes each, and combines them.
-    Logs token counts and uses fallback if any error occurs.
+    Attempts to create a full-page summary by increasing the length.
     """
-    # Get token count for the full text
     full_tokens = tokenizer.encode(text, add_special_tokens=False)
     full_token_count = len(full_tokens)
     print(f"Article '{article_title}': full text token count = {full_token_count}")
     
-    # Split text into chunks and get token counts for each
-    chunks, chunk_token_counts = chunk_text(text, max_tokens=512)
-    for idx, count in enumerate(chunk_token_counts):
-        print(f"Article '{article_title}': Chunk {idx+1} token count = {count}")
-
+    chunks, chunk_token_counts = chunk_text(text, max_tokens=1024)  # Keep chunk size large
     chunk_summaries = []
-    MAX_CHUNKS = 5 
+    MAX_CHUNKS = 5  # Limit the number of chunks processed
+
     for idx, chunk in enumerate(chunks[:MAX_CHUNKS]):
         try:
             token_ids = tokenizer.encode(chunk, add_special_tokens=False)
             token_count = len(token_ids)
             
-            # If the chunk is too short, use fallback
             if token_count < 50:
-                fallback = simple_summary(chunk, num_sentences=1)
+                fallback = simple_summary(chunk, num_sentences=3)
                 print(f"Article '{article_title}', Chunk {idx+1}: Token count too low ({token_count}). Using fallback summary.")
                 chunk_summaries.append(fallback)
                 continue
 
-            # Dynamically set parameters based on token count
-            effective_max_length = 400 if token_count > 400 else token_count - 1
-            effective_min_length = 150 if effective_max_length > 150 else max(80, effective_max_length - 1)
-
-            print(f"Article '{article_title}', Chunk {idx+1}: token_count={token_count}, effective_max_length={effective_max_length}, effective_min_length={effective_min_length}")
-
-            summary_out = summarizer(chunk, max_length=effective_max_length, min_length=effective_min_length, do_sample=False)
+            # Increase the summary length
+            summary_out = summarizer(chunk, max_length=800, min_length=400, do_sample=False)
             summary = summary_out[0]['summary_text']
             chunk_summaries.append(summary.strip())
         except Exception as e:
             print(f"Error summarizing chunk {idx+1} for '{article_title}': {e}. Using fallback for this chunk.")
-            chunk_summaries.append(simple_summary(chunk, num_sentences=1))
+            chunk_summaries.append(simple_summary(chunk, num_sentences=3))
 
-    # Combine chunk summaries if more than one exists
-    if len(chunk_summaries) > 1:
-        combined_text = " ".join(chunk_summaries)
-        try:
-            combined_tokens = tokenizer.encode(combined_text, add_special_tokens=False)
-            combined_token_count = len(combined_tokens)
-            print(f"Article '{article_title}': combined summary token count = {combined_token_count}")
-            final_max_length = 150 if combined_token_count > 150 else combined_token_count - 1
-            final_min_length = 40 if final_max_length > 40 else max(10, final_max_length - 1)
-            final_summary_out = summarizer(combined_text, max_length=final_max_length, min_length=final_min_length, do_sample=False)
-            final_summary = final_summary_out[0]['summary_text']
-            return final_summary.strip()
-        except Exception as e:
-            print(f"Error summarizing combined text for '{article_title}': {e}. Using fallback for combined summary.")
-            return simple_summary(combined_text, num_sentences=2)
-    else:
-        return chunk_summaries[0]
+    # Combine chunk summaries and summarize again for a more detailed final summary
+    combined_text = " ".join(chunk_summaries)
+    try:
+        combined_tokens = tokenizer.encode(combined_text, add_special_tokens=False)
+        combined_token_count = len(combined_tokens)
+        print(f"Article '{article_title}': combined summary token count = {combined_token_count}")
+
+        # Increase final summary size
+        final_summary_out = summarizer(combined_text, max_length=1000, min_length=500, do_sample=False)
+        final_summary = final_summary_out[0]['summary_text']
+        return final_summary.strip()
+    except Exception as e:
+        print(f"Error summarizing combined text for '{article_title}': {e}. Using fallback for combined summary.")
+        return simple_summary(combined_text, num_sentences=50)
+
 
 # File paths
-input_file = "../scholar_results.json"   # Your input JSON file
+input_file = "scholar_results_clean.json"   # Your input JSON file
 output_file = "abstracts_gpu.json"          # File to store generated abstracts
 
 # Load the scholar results JSON file
