@@ -5,21 +5,21 @@ import os
 class PDF(FPDF):
     def header(self):
         # Header on every page with the main title centered
-        self.set_font('DejaVu', 'B', 16)
+        self.set_font('DejaVu', 'B', 14)  # Smaller header font size
         self.cell(0, 10, 'Exercise snacking Study', border=False, ln=1, align='C')
-        self.ln(5)
+        self.ln(3)
         
     def chapter_title(self, title):
         # Title of each section
-        self.set_font('DejaVu', 'B', 14)
+        self.set_font('DejaVu', 'B', 12)  # Slightly smaller than before
         self.multi_cell(0, 10, title)
-        self.ln(3)
+        self.ln(2)
 
     def chapter_body(self, body):
-        # Abstract text
-        self.set_font('DejaVu', '', 12)
-        self.multi_cell(0, 10, body)
-        self.ln(5)
+        # Abstract text with smaller font size to fit more content on a page
+        self.set_font('DejaVu', '', 10)
+        self.multi_cell(0, 7, body)
+        self.ln(3)
 
 def main():
     input_file = "abstracts_gpu.json"
@@ -43,7 +43,7 @@ def main():
     
     # Cover page
     pdf.add_page()
-    pdf.set_font("DejaVu", 'B', 24)
+    pdf.set_font("DejaVu", 'B', 20)  # Cover page title larger if needed
     pdf.cell(0, 20, "Exercise snacking Study", ln=True, align="C")
     pdf.ln(10)
     
